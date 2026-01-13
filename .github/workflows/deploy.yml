@@ -1,0 +1,36 @@
+name: Deploy website to EC2
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "index.html"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Copy index.html to EC2 (/tmp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "index.html"
+          target: "/tmp"
+
+      - name: Move file into Apache web root and restart Apache
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo mv /tmp/index.html /var/www/html/index.html
+            sudo chown root:root /var/www/html/index.html
+            sudo chmod 644 /var/www/html/index.html
+            sudo systemctl restart httpd
